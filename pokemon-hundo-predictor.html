@@ -35,68 +35,76 @@
     .container { max-width: 860px; margin: 0 auto; }
 
     /* ── Prediction card ─────────────────────────────────── */
-    .prediction-card {
-      background: linear-gradient(135deg, #1e3a5f, #2d1b69);
-      border: 2px solid #f7c948;
-      border-radius: 20px;
-      padding: 30px;
-      text-align: center;
+    .prediction-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
       margin-bottom: 30px;
-      position: relative;
-      overflow: hidden;
     }
 
-    .prediction-card::before {
+    @media (max-width: 800px) {
+      .prediction-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 480px) {
+      .prediction-grid { grid-template-columns: 1fr; }
+    }
+
+    .pred-card {
+      background: linear-gradient(135deg, #1e3a5f, #2d1b69);
+      border: 2px solid rgba(247,201,72,0.35);
+      border-radius: 16px;
+      padding: 20px 14px;
+      text-align: center;
+      position: relative;
+    }
+
+    .pred-card::before {
       content: '⭐ 100% IV';
       position: absolute;
-      top: 12px; right: 16px;
+      top: 10px; right: 10px;
       background: #f7c948;
       color: #000;
       font-weight: 700;
-      font-size: 0.75rem;
-      padding: 4px 10px;
+      font-size: 0.65rem;
+      padding: 3px 8px;
       border-radius: 20px;
     }
 
-    .prediction-label {
-      font-size: 0.85rem;
+    .pred-method {
+      font-size: 0.68rem;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       color: #f7c948;
       margin-bottom: 10px;
     }
 
-    .prediction-pokemon-name {
-      font-size: 2.6rem;
-      font-weight: 900;
-      text-transform: capitalize;
-      margin-bottom: 4px;
-    }
-
-    .prediction-dex {
-      color: #aaa;
-      font-size: 0.85rem;
-      margin-bottom: 16px;
-    }
-
-    .prediction-sprite {
-      width: 130px;
-      height: 130px;
+    .pred-sprite {
+      width: 90px;
+      height: 90px;
       image-rendering: pixelated;
-      filter: drop-shadow(0 0 20px rgba(247,201,72,0.6));
+      filter: drop-shadow(0 0 12px rgba(247,201,72,0.4));
       animation: float 3s ease-in-out infinite;
     }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50%       { transform: translateY(-10px); }
+    .pred-name {
+      font-size: 1.2rem;
+      font-weight: 900;
+      text-transform: capitalize;
+      margin: 6px 0 2px;
     }
 
-    .confidence-bar-wrap {
-      margin-top: 16px;
+    .pred-dex {
+      font-size: 0.72rem;
+      color: #aaa;
+      margin-bottom: 10px;
     }
 
-    .confidence-label { font-size: 0.8rem; color: #aaa; margin-bottom: 6px; }
+    .pred-note {
+      font-size: 0.72rem;
+      color: #888;
+      font-style: italic;
+    }
 
     .confidence-bar {
       background: rgba(255,255,255,0.1);
@@ -108,7 +116,7 @@
     .confidence-fill {
       height: 100%;
       border-radius: 20px;
-      background: linear-gradient(90deg, #2ecc71, #f7c948);
+      background: linear-gradient(90deg, #3498db, #f7c948);
       transition: width 1s ease;
     }
 
@@ -153,12 +161,12 @@
     }
 
     .history-card.today {
-      border-color: #2ecc71;
-      background: rgba(46,204,113,0.1);
+      border-color: #3498db;
+      background: rgba(52,152,219,0.12);
     }
 
     .history-card.yesterday {
-      border-color: #3498db;
+      border-color: #9b59b6;
       background: rgba(52,152,219,0.1);
     }
 
@@ -170,8 +178,8 @@
       color: #aaa;
     }
 
-    .history-card.today .history-day-label   { color: #2ecc71; }
-    .history-card.yesterday .history-day-label { color: #3498db; }
+    .history-card.today .history-day-label   { color: #3498db; }
+    .history-card.yesterday .history-day-label { color: #9b59b6; }
 
     .history-sprite {
       width: 72px;
@@ -318,7 +326,7 @@
       position: fixed;
       bottom: 24px; left: 50%;
       transform: translateX(-50%) translateY(80px);
-      background: #2ecc71;
+      background: #3498db;
       color: #000;
       font-weight: 700;
       padding: 12px 24px;
@@ -360,11 +368,8 @@
   </div>
 
   <!-- Tomorrow's prediction -->
-  <div class="section-title">🔮 Tomorrow's Predicted Hundo</div>
-  <div class="prediction-card" id="predictionCard">
-    <div class="prediction-label">Predicted for tomorrow</div>
-    <div id="predictionContent"><div class="spinner"></div></div>
-  </div>
+  <div class="section-title">🔮 Tomorrow's Predictions</div>
+  <div class="prediction-grid" id="predictionGrid"></div>
 
   <!-- History -->
   <div class="section-title">📅 Hundo History</div>
@@ -412,9 +417,6 @@
 <div id="toast">Entry added!</div>
 
 <script>
-// ──────────────────────────────────────────────────────────────────
-// Storage helpers
-// ──────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'hundo_log';
 
 function loadLog() {
@@ -424,13 +426,9 @@ function loadLog() {
 
 function saveLog(log) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
-  // Push to cloud on every change if configured
   if (isCloudReady()) cloudSave(log).catch(() => setSyncStatus('error'));
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Pokémon API
-// ──────────────────────────────────────────────────────────────────
 const pokeCache = {};
 
 async function fetchPokemon(name) {
@@ -442,6 +440,7 @@ async function fetchPokemon(name) {
   const info = {
     name: data.name,
     id: data.id,
+    types: data.types.map(t => t.type.name),
     sprite: data.sprites.other['official-artwork']?.front_default
            || data.sprites.front_default
            || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.id}.png`
@@ -454,45 +453,87 @@ async function fetchPokemonById(id) {
   return fetchPokemon(String(id));
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Pattern detection & prediction
-// ──────────────────────────────────────────────────────────────────
-function detectPattern(ids) {
-  if (ids.length < 2) return null;
-  // Try arithmetic progression using last 5 points
+const GEN_RANGES = [[1,151],[152,251],[252,386],[387,493],[494,649],[650,721],[722,809],[810,905],[906,1025]];
+
+function getGen(id) {
+  return GEN_RANGES.findIndex(([min, max]) => id >= min && id <= max) + 1 || 1;
+}
+
+function clampDex(n) {
+  return ((n - 1) % 1025 + 1025) % 1025 + 1;
+}
+
+function predictLinear(log) {
+  const ids = [...log].sort((a,b) => a.date.localeCompare(b.date)).map(e => e.pokeId);
+  if (ids.length < 2) return { id: clampDex(ids[0] + 1), confidence: 20, note: 'need more data' };
   const recent = ids.slice(-5);
-  const diffs = recent.slice(1).map((v, i) => v - recent[i]);
+  const diffs = recent.slice(1).map((v,i) => v - recent[i]);
   const allSame = diffs.every(d => d === diffs[0]);
-  if (allSame) {
-    return { step: diffs[0], confidence: Math.min(95, 50 + diffs.length * 10) };
-  }
-  // Average step
-  const avg = Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length);
-  const variance = diffs.map(d => Math.abs(d - avg));
-  const maxVar = Math.max(...variance);
-  const conf = Math.max(20, 60 - maxVar * 2);
-  return { step: avg, confidence: conf };
+  const step = allSame ? diffs[0] : Math.round(diffs.reduce((a,b) => a+b,0) / diffs.length);
+  const conf = allSame ? Math.min(95, 50 + diffs.length * 10) : Math.max(20, 60 - Math.max(...diffs.map(d => Math.abs(d - step))) * 2);
+  return { id: clampDex(ids[ids.length-1] + step), confidence: conf, note: `${step > 0 ? '+' : ''}${step} dex/day` };
 }
 
-function predictNextId(log) {
-  if (log.length === 0) return null;
-  const sorted = [...log].sort((a, b) => a.date.localeCompare(b.date));
-  const ids = sorted.map(e => e.pokeId);
-  const pattern = detectPattern(ids);
-  if (!pattern) return { id: ids[ids.length - 1] + 1, confidence: 20, step: 1 };
-  const next = ids[ids.length - 1] + pattern.step;
-  // Clamp to valid dex range (1-1025)
-  const clamped = ((next - 1) % 1025 + 1025) % 1025 + 1;
-  return { id: clamped, confidence: pattern.confidence, step: pattern.step };
+function predictWeighted(log) {
+  const ids = [...log].sort((a,b) => a.date.localeCompare(b.date)).map(e => e.pokeId);
+  if (ids.length < 2) return { id: clampDex(ids[0] + 1), confidence: 20, note: 'need more data' };
+  const diffs = ids.slice(1).map((v,i) => v - ids[i]);
+  let wStep = 0, wTotal = 0;
+  diffs.forEach((d, i) => { const w = i + 1; wStep += d * w; wTotal += w; });
+  const step = Math.round(wStep / wTotal);
+  return { id: clampDex(ids[ids.length-1] + step), confidence: Math.min(85, 35 + diffs.length * 9), note: `recent-weighted step ${step > 0 ? '+' : ''}${step}` };
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Rendering
-// ──────────────────────────────────────────────────────────────────
-function dateLabel(dateStr) {
+function predictGeneration(log) {
+  const sorted = [...log].sort((a,b) => a.date.localeCompare(b.date));
+  const gens = sorted.map(e => getGen(e.pokeId));
+  const diffs = gens.slice(1).map((g,i) => g - gens[i]);
+  const step = diffs.length ? (Math.round(diffs.reduce((a,b) => a+b,0) / diffs.length) || 1) : 1;
+  const nextGen = Math.max(1, Math.min(9, gens[gens.length-1] + step));
+  const [min, max] = GEN_RANGES[nextGen-1];
+  const id = Math.round((min + max) / 2);
+  return { id, confidence: Math.min(70, 25 + diffs.length * 8), note: `Gen ${nextGen} (dex #${min}–${max})` };
+}
+// GO-style type rotation: mirrors how Niantic themes events by type
+const TYPE_WHEEL = ['normal','fire','water','grass','electric','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
+
+const typeCache = {};
+async function fetchTypePool(type) {
+  if (typeCache[type]) return typeCache[type];
+  const res = await fetch(`https://pokeapi.co/api/v2/type/${type}`);
+  const data = await res.json();
+  const ids = data.pokemon
+    .map(p => parseInt(p.pokemon.url.match(/\/(\d+)\//)?.[1]))
+    .filter(id => id && id <= 1025);
+  typeCache[type] = ids;
+  return ids;
+}
+
+async function predictSmartGO(log) {
+  const sorted = [...log].sort((a,b) => a.date.localeCompare(b.date));
+  const recent = sorted.slice(-6);
+  const pokeData = await Promise.all(recent.map(e => fetchPokemon(e.name)));
+  const primaryTypes = pokeData.map(p => p.types[0]);
+
+  const typeIdxs = primaryTypes.map(t => TYPE_WHEEL.indexOf(t)).filter(i => i >= 0);
+  const typeSteps = typeIdxs.slice(1).map((v,i) => v - typeIdxs[i]);
+  const step = typeSteps.length ? (Math.round(typeSteps.reduce((a,b)=>a+b,0)/typeSteps.length) || 1) : 1;
+  const nextTypeIdx = ((typeIdxs[typeIdxs.length-1] + step) % TYPE_WHEEL.length + TYPE_WHEEL.length) % TYPE_WHEEL.length;
+  const nextType = TYPE_WHEEL[nextTypeIdx];
+
+  const pool = await fetchTypePool(nextType);
+  pool.sort((a,b) => a-b);
+
+  const lastGen = getGen(sorted[sorted.length-1].pokeId);
+  const sameGen = pool.filter(id => getGen(id) === lastGen);
+  const candidates = sameGen.length >= 3 ? sameGen : pool.filter(id => id >= 1 && id <= 500);
+
+  const id = candidates[Math.floor(candidates.length / 2)] || pool[Math.floor(pool.length / 2)];
+  const conf = Math.min(80, 30 + typeSteps.length * 9);
+  return { id, confidence: conf, note: `${nextType} type · Gen ${getGen(id)}` };
+}
   const today = new Date(); today.setHours(0,0,0,0);
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  // Parse as local date
   const [y, m, d] = dateStr.split('-').map(Number);
   const dt = new Date(y, m - 1, d);
   if (dt.getTime() === today.getTime()) return 'Today';
@@ -504,20 +545,16 @@ async function renderHistory() {
   const log = loadLog();
   const grid = document.getElementById('historyGrid');
   grid.innerHTML = '';
-
   if (log.length === 0) {
     grid.innerHTML = '<p style="color:#666;font-size:0.85rem;">No entries yet. Add some below!</p>';
     return;
   }
-
   const sorted = [...log].sort((a, b) => b.date.localeCompare(a.date));
-
   for (const entry of sorted) {
     const label = dateLabel(entry.date);
     const card = document.createElement('div');
     card.className = 'history-card' +
       (label === 'Today' ? ' today' : label === 'Yesterday' ? ' yesterday' : '');
-
     card.innerHTML = `
       <div class="history-day-label">${label}</div>
       <img class="history-sprite" src="${entry.sprite}" alt="${entry.name}"
@@ -532,63 +569,60 @@ async function renderHistory() {
 
 async function renderPrediction() {
   const log = loadLog();
-  const card = document.getElementById('predictionContent');
-
+  const grid = document.getElementById('predictionGrid');
   if (log.length === 0) {
-    card.innerHTML = '<p style="color:#888;">Add some hundo entries below to generate a prediction!</p>';
+    grid.innerHTML = '<p style="color:#888;">Add some hundo entries below to generate predictions!</p>';
     document.getElementById('statConfidence').textContent = '—';
     return;
   }
-
-  const prediction = predictNextId(log);
-  if (!prediction) {
-    card.innerHTML = '<p style="color:#888;">Need more data to predict.</p>';
-    return;
-  }
-
-  card.innerHTML = '<div class="spinner"></div>';
-
-  try {
-    const poke = await fetchPokemonById(prediction.id);
-    const stepDesc = prediction.step > 0
-      ? `+${prediction.step} Pokédex per day`
-      : `${prediction.step} Pokédex per day`;
-
-    card.innerHTML = `
-      <img class="prediction-sprite" src="${poke.sprite}" alt="${poke.name}"
-           onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png'" />
-      <div class="prediction-pokemon-name">${poke.name}</div>
-      <div class="prediction-dex">#${String(poke.id).padStart(3,'0')}</div>
-      <div class="confidence-bar-wrap">
-        <div class="confidence-label">Pattern confidence: ${prediction.confidence}%</div>
-        <div class="confidence-bar">
-          <div class="confidence-fill" style="width:${prediction.confidence}%"></div>
+  grid.innerHTML = '<div class="spinner"></div>';
+  const methods = [
+    { label: 'Dex Arithmetic',   fn: () => Promise.resolve(predictLinear(log)) },
+    { label: 'Recent Weighted',  fn: () => Promise.resolve(predictWeighted(log)) },
+    { label: 'Generation Cycle', fn: () => Promise.resolve(predictGeneration(log)) },
+    { label: 'GO Type + Gen',    fn: () => predictSmartGO(log) },
+  ];
+  const results = await Promise.allSettled(
+    methods.map(async m => { const pred = await m.fn(); return { label: m.label, pred, poke: await fetchPokemonById(pred.id) }; })
+  );
+  grid.innerHTML = '';
+  let totalConf = 0, confCount = 0;
+  for (const r of results) {
+    if (r.status === 'rejected') {
+      grid.innerHTML += `<div class="pred-card"><p class="error-text">Failed to load</p></div>`;
+      continue;
+    }
+    const { label, pred, poke } = r.value;
+    totalConf += pred.confidence; confCount++;
+    grid.innerHTML += `
+      <div class="pred-card">
+        <div class="pred-method">${label}</div>
+        <img class="pred-sprite" src="${poke.sprite}" alt="${poke.name}"
+             onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png'" />
+        <div class="pred-name">${poke.name}</div>
+        <div class="pred-dex">#${String(poke.id).padStart(3,'0')}</div>
+        <div class="confidence-bar-wrap">
+          <div class="confidence-label">${pred.confidence}% confidence</div>
+          <div class="confidence-bar"><div class="confidence-fill" style="width:${pred.confidence}%"></div></div>
         </div>
-        <div class="pattern-info">Detected step: ${stepDesc}</div>
-      </div>
-    `;
-    document.getElementById('statConfidence').textContent = prediction.confidence + '%';
-  } catch {
-    card.innerHTML = `<p class="error-text">Couldn't load Pokémon #${prediction.id}. Try adding more data!</p>`;
+        <div class="pred-note">${pred.note}</div>
+      </div>`;
   }
+  if (confCount) document.getElementById('statConfidence').textContent =
+    Math.round(totalConf / confCount) + '%';
 }
 
 function renderStats() {
   const log = loadLog();
   document.getElementById('statDays').textContent = log.length;
-  const unique = new Set(log.map(e => e.name)).size;
-  document.getElementById('statUnique').textContent = unique;
-  // Streak: consecutive days ending today/yesterday
+  document.getElementById('statUnique').textContent = new Set(log.map(e => e.name)).size;
   const today = new Date(); today.setHours(0,0,0,0);
   const dates = [...new Set(log.map(e => e.date))].sort((a,b) => b.localeCompare(a));
-  let streak = 0;
-  let expected = new Date(today);
+  let streak = 0, expected = new Date(today);
   for (const d of dates) {
     const [y, m, day] = d.split('-').map(Number);
-    const dt = new Date(y, m-1, day);
-    if (dt.getTime() === expected.getTime()) {
-      streak++;
-      expected.setDate(expected.getDate() - 1);
+    if (new Date(y,m-1,day).getTime() === expected.getTime()) {
+      streak++; expected.setDate(expected.getDate() - 1);
     } else break;
   }
   document.getElementById('statStreak').textContent = streak;
@@ -600,27 +634,20 @@ async function renderAll() {
   await renderPrediction();
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Entry management
-// ──────────────────────────────────────────────────────────────────
 async function addEntry() {
   const nameInput = document.getElementById('inputPokemon');
   const dateInput = document.getElementById('inputDate');
   const name = nameInput.value.trim().toLowerCase();
   const date = dateInput.value;
-
   if (!name) { showToast('Enter a Pokémon name!', '#e74c3c'); return; }
   if (!date) { showToast('Pick a date!', '#e74c3c'); return; }
-
   try {
     const poke = await fetchPokemon(name);
-    const log = loadLog();
-    // Remove duplicate for same date
-    const filtered = log.filter(e => e.date !== date);
+    const filtered = loadLog().filter(e => e.date !== date);
     filtered.push({ date, name: poke.name, pokeId: poke.id, sprite: poke.sprite });
     saveLog(filtered);
     nameInput.value = '';
-    showToast(`${poke.name} added for ${dateLabel(date)}!`, '#2ecc71');
+    showToast(`${poke.name} added for ${dateLabel(date)}!`, '#3498db');
     await renderAll();
   } catch (err) {
     showToast(`Unknown Pokémon: "${name}"`, '#e74c3c');
@@ -672,7 +699,7 @@ function setSyncStatus(state) {
   const map = {
     unconfigured: { color: '#e67e22', text: 'Cloud sync not connected',              btnLabel: null,          showGuide: true  },
     syncing:      { color: '#f7c948', text: 'Syncing with cloud…',                   btnLabel: null,          showGuide: false },
-    synced:       { color: '#2ecc71', text: 'Cloud synced ✓',                        btnLabel: 'Disconnect',  showGuide: false },
+    synced:       { color: '#3498db', text: 'Cloud synced ✓',                        btnLabel: 'Disconnect',  showGuide: false },
     error:        { color: '#e74c3c', text: 'Sync error — check your key',           btnLabel: 'Retry',       showGuide: true  },
   };
   const s = map[state] || map.unconfigured;
@@ -715,7 +742,7 @@ async function setupCloud() {
     localStorage.setItem('hundo_jb_bin', data.metadata.id);
     // Push any existing local entries to the new bin
     if (loadLog().length > 0) await cloudSave(loadLog());
-    showToast('Cloud connected!', '#2ecc71');
+    showToast('Cloud connected!', '#3498db');
     setSyncStatus('synced');
   } catch (e) {
     errEl.textContent = `Error: ${e.message}`;
@@ -741,51 +768,34 @@ async function initCloudSync() {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Toast
-// ──────────────────────────────────────────────────────────────────
-function showToast(msg, color = '#2ecc71') {
+function showToast(msg, color = '#3498db') {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.background = color;
-  t.style.color = color === '#2ecc71' ? '#000' : '#fff';
+  t.style.color = '#fff';
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Init: pre-seed with the user's data then render
-// ──────────────────────────────────────────────────────────────────
 async function init() {
-  // Set date input to today
   const today = new Date();
   const pad = n => String(n).padStart(2,'0');
   document.getElementById('inputDate').value =
     `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-
   let log = loadLog();
-
-  // Pre-seed with Snorlax yesterday + Gyarados today if log is empty
   if (log.length === 0) {
     const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
     const yest = new Date(today); yest.setDate(yest.getDate()-1);
     const yesterdayStr = `${yest.getFullYear()}-${pad(yest.getMonth()+1)}-${pad(yest.getDate())}`;
-
     try {
-      const [gyarados, snorlax] = await Promise.all([
-        fetchPokemon('gyarados'),
-        fetchPokemon('snorlax')
-      ]);
+      const [gyarados, snorlax] = await Promise.all([fetchPokemon('gyarados'), fetchPokemon('snorlax')]);
       log = [
         { date: yesterdayStr, name: snorlax.name, pokeId: snorlax.id, sprite: snorlax.sprite },
         { date: todayStr,     name: gyarados.name, pokeId: gyarados.id, sprite: gyarados.sprite }
       ];
       saveLog(log);
-    } catch (e) {
-      console.warn('Could not pre-seed data', e);
-    }
+    } catch (e) { console.warn('Could not pre-seed data', e); }
   }
-
   await initCloudSync();
   await renderAll();
 }
