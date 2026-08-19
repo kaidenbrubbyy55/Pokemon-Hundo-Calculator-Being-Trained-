@@ -532,6 +532,8 @@ async function predictSmartGO(log) {
   const conf = Math.min(80, 30 + typeSteps.length * 9);
   return { id, confidence: conf, note: `${nextType} type · Gen ${getGen(id)}` };
 }
+
+function dateLabel(dateStr) {
   const today = new Date(); today.setHours(0,0,0,0);
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -571,7 +573,7 @@ async function renderPrediction() {
   const log = loadLog();
   const grid = document.getElementById('predictionGrid');
   if (log.length === 0) {
-    grid.innerHTML = '<p style="color:#888;">Add some hundo entries below to generate predictions!</p>';
+    grid.innerHTML = '<p style="color:#aaa;font-size:0.95rem;padding:20px 0;">Log some hundo days below and predictions will appear here!</p>';
     document.getElementById('statConfidence').textContent = '—';
     return;
   }
@@ -787,14 +789,12 @@ async function init() {
     const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
     const yest = new Date(today); yest.setDate(yest.getDate()-1);
     const yesterdayStr = `${yest.getFullYear()}-${pad(yest.getMonth()+1)}-${pad(yest.getDate())}`;
-    try {
-      const [gyarados, snorlax] = await Promise.all([fetchPokemon('gyarados'), fetchPokemon('snorlax')]);
-      log = [
-        { date: yesterdayStr, name: snorlax.name, pokeId: snorlax.id, sprite: snorlax.sprite },
-        { date: todayStr,     name: gyarados.name, pokeId: gyarados.id, sprite: gyarados.sprite }
-      ];
-      saveLog(log);
-    } catch (e) { console.warn('Could not pre-seed data', e); }
+    const base = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/';
+    log = [
+      { date: yesterdayStr, name: 'snorlax',  pokeId: 143, sprite: `${base}143.png` },
+      { date: todayStr,     name: 'gyarados', pokeId: 130, sprite: `${base}130.png` }
+    ];
+    saveLog(log);
   }
   await initCloudSync();
   await renderAll();
